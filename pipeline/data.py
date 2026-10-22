@@ -12,7 +12,7 @@ IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 
 def label_path(img_path: Path) -> Path:
-    """YOLO-соглашение: .../images/x.jpg -> .../labels/x.txt (иначе txt лежит рядом с картинкой)."""
+    """YOLO-разметка: .../images/x.jpg -> .../labels/x.txt"""
     parts = list(img_path.parts)
     for i in range(len(parts) - 2, -1, -1):
         if parts[i] == "images":
@@ -52,7 +52,8 @@ def read_yolo(path: Path, w: int, h: int, num_classes: int) -> tuple[np.ndarray,
 
 
 def build_transforms(size: int, train: bool, strong: bool) -> T.Compose:
-    """Аугментации как в оригинальном D-FINE (torchvision v2); без нормализации — только деление на 255."""
+    """Аугментации как в оригинальном DEIMv2 без Mosaic/MixUp (torchvision v2); только деление на 255 —
+    ImageNet-нормализация для DINOv3-вариантов делается внутри модели."""
     ops = []
     if train:
         if strong:
@@ -74,8 +75,8 @@ def build_transforms(size: int, train: bool, strong: bool) -> T.Compose:
 
 
 class YoloDataset(Dataset):
-    """Датасет в YOLO-формате. Отдаёт тензор 3xSxS и target в формате HF D-FINE:
-    class_labels (N,) и boxes (N, 4) — cx, cy, w, h в долях от размера кадра."""
+    """Датасет в YOLO-формате. Отдаёт тензор 3xSxS и target в формате DEIMv2:
+    labels (N,) и boxes (N, 4) — cx, cy, w, h в долях от размера кадра."""
 
     def __init__(self, images_dir: Path, size: int, num_classes: int, train: bool):
         if not images_dir.exists():
@@ -110,7 +111,7 @@ class YoloDataset(Dataset):
         x1, y1, x2, y2 = target["boxes"].as_subclass(torch.Tensor).unbind(-1)
         cxcywh = torch.stack([(x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1], dim=-1) / self.size
 
-        return img, {"class_labels": target["labels"].long(), "boxes": cxcywh.clamp(0, 1).float()}
+        return img, {"labels": target["labels"].long(), "boxes": cxcywh.clamp(0, 1).float()}
 
 
 def collate_fn(batch):

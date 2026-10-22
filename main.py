@@ -32,7 +32,7 @@ def main(cfg: DictConfig) -> None:
     train_loader, val_loader = make_loaders(cfg)
 
     # Обучение (weights=null — старт с COCO, иначе — с переданного чекпоинта, например stage1)
-    model = build_model(cfg.model, names, device)
+    model = build_model(cfg.model, names, cfg.train.resolution, device)
     best = fit(model, train_loader, val_loader, cfg, device, out_dir / "weights", task)
     task.upload_artifact("best_weights", artifact_object=str(best))
     del model

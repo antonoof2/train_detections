@@ -1,7 +1,11 @@
 torch>=2.3                  # torch.amp.GradScaler
 torchvision>=0.18          # transforms.v2 + tv_tensors
-transformers>=4.52          # DFineForObjectDetection (проверено на 5.x)
-scipy                       # венгерский матчер в loss D-FINE
+huggingface_hub             # COCO-веса DEIMv2 с HF Hub, save_pretrained / from_pretrained
+safetensors
+scipy                       # венгерский матчер в loss DEIMv2
+faster-coco-eval            # нужны для импорта engine из репозитория DEIMv2
+tensorboard
+sympy
 torchmetrics                # mAP
 pycocotools                 # бэкенд для torchmetrics.MeanAveragePrecision
 clearml

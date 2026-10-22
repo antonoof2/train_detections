@@ -9,7 +9,10 @@ from pipeline.utils import autocast
 
 
 class Detector:
-    """Предсказание на BGR-кадре: сжатие в квадрат resolution x resolution (как при обучении), деление на 255."""
+    """Предсказание на BGR-кадре: сжатие в квадрат resolution x resolution (как при обучении), деление на 255.
+
+    resolution должен совпадать с тем, под который сохранена модель (eval_spatial_size в config.json).
+    """
 
     def __init__(self, model: nn.Module, size: int, device: torch.device, amp: str = "none"):
         self.model = model.eval()
@@ -26,8 +29,8 @@ class Detector:
         x = torch.from_numpy(np.asarray(rgb)).permute(2, 0, 1).float().div(255).unsqueeze(0).to(self.device)
 
         with autocast(self.device, self.amp):
-            out = self.model(pixel_values=x)
-        boxes, scores, labels = postprocess(out.logits, out.pred_boxes)
+            out = self.model(x)
+        boxes, scores, labels = postprocess(out["pred_logits"], out["pred_boxes"])
 
         keep = scores[0] >= conf
         scale = torch.tensor([w, h, w, h], dtype=torch.float32, device=boxes.device)

@@ -1,34 +1,34 @@
 clearml:
   project_name: detection_fire
-  task_name: dfine960_nano_stage1
-  tags: [dfine, 960imgsz, nano, stage1]
+  task_name: deimv2_640_large_stage1_test
+  tags: [deimv2, 640imgsz, large, stage1, test]
 
 data:
-  root: ../data/dataset   # путь к датасету (YOLO-формат)
-  train: stage1/images    # пути относительно root, labels лежат рядом: .../images -> .../labels
+  root: ../data/dataset   # путь к датасету
+  train: stage1/images    # пути относительно root
   val: val/images
   names: [people, fire, smoke]
 
 model:
-  size: nano       # nano | small | medium | large | xlarge
+  size: large       # atto | femto | pico | nano (HGNetv2) | small | medium | large | xlarge (DINOv3)
   weights: null
 
 # параметры обучения
 train:
-  resolution: 960           # кратно 32; кадры сжимаются в квадрат resolution x resolution
-  epochs: 5
+  resolution: 640           # кратно 32; под него же строятся якоря для инференса
+  epochs: 1
   batch_size: 12
   grad_accum_steps: 2       # эффективный батч = batch_size * grad_accum_steps
-  lr: 2.0e-4                # энкодер, декодер и головы
-  lr_backbone: 2.0e-5       # бэкбон HGNetV2 (дообучаем осторожнее)
-  weight_decay: 1.0e-4
+  lr: 2.5e-4                # энкодер, декодер, головы (и STA-адаптер у DINOv3)
+  lr_backbone: 1.25e-5      # ViT DINOv3 / HGNetV2 (в DEIMv2-L: 5e-4 / 1.25e-5 при батче 32)
+  weight_decay: 1.25e-4
   warmup_steps: 300         # шагов оптимизатора, линейный разогрев lr
   min_lr_ratio: 0.05        # косинус затухает до lr * min_lr_ratio
   clip_grad_norm: 0.1
   amp: bf16                 # bf16 | fp16 | none (bf16 без поддержки GPU автоматически станет fp16)
   ema: true                 # метрики, best/last и инференс — по EMA-весам
   ema_decay: 0.9999
-  ema_tau: 2000             # разогрев EMA: decay * (1 - exp(-step / tau))
+  ema_tau: 1000             # разогрев EMA: decay * (1 - exp(-step / tau))
   multiscale: true          # случайный размер батча в [resolution - range, resolution + range]
   multiscale_range: 96
   no_aug_last_epochs: 1     # в последних N эпохах сильные аугментации и multiscale выключены

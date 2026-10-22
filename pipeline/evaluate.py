@@ -14,7 +14,7 @@ def cxcywh_to_xyxy(boxes: torch.Tensor) -> torch.Tensor:
 
 
 def postprocess(logits: torch.Tensor, pred_boxes: torch.Tensor):
-    """Как в D-FINE/RT-DETR: sigmoid и top-k по всем парам (запрос, класс).
+    """Как PostProcessor в DEIMv2/RT-DETR: sigmoid и top-k по всем парам (запрос, класс).
 
     Возвращает боксы xyxy в долях [0, 1] (B, K, 4), оценки (B, K) и классы (B, K).
     """
@@ -59,8 +59,9 @@ def count_matches(pred: dict, gt: dict, conf: float, iou_thr: float, tp, fp, fn)
 def evaluate(
     model: nn.Module, loader: DataLoader, device: torch.device, names: list[str], conf: float = 0.3, amp: str = "none"
 ) -> dict[str, float]:
-    """Метрики на val: mAP50, mAP50-95, AP по классам, precision/recall/F1 (IoU 0.5, оценка >= conf), val_loss.
+    """Метрики на val: mAP50, mAP50-95, AP по классам, precision/recall/F1 (IoU 0.5, оценка >= conf).
 
+    val_loss не считается: loss DEIMv2 требует aux-выходов декодера, которые есть только в train-режиме.
     Все боксы считаются в пространстве SxS: масштабирование по осям не меняет IoU, так что метрики
     совпадают с метриками в исходных координатах кадра.
     """
@@ -70,18 +71,14 @@ def evaluate(
     num_classes = len(names)
     mean_ap = MeanAveragePrecision(box_format="xyxy", iou_type="bbox", class_metrics=True)
     tp, fp, fn = (torch.zeros(num_classes) for _ in range(3))
-    loss_sum, batches = 0.0, 0
 
     for images, targets in loader:
-        labels = [{k: v.to(device) for k, v in t.items()} for t in targets]
         with autocast(device, amp):
-            out = model(pixel_values=images.to(device, non_blocking=True), labels=labels)
-        loss_sum += float(out.loss)
-        batches += 1
+            out = model(images.to(device, non_blocking=True))
 
-        boxes, scores, classes = (x.cpu() for x in postprocess(out.logits, out.pred_boxes))
+        boxes, scores, classes = (x.cpu() for x in postprocess(out["pred_logits"], out["pred_boxes"]))
         preds = [{"boxes": b * scale, "scores": s, "labels": c} for b, s, c in zip(boxes, scores, classes)]
-        gts = [{"boxes": cxcywh_to_xyxy(t["boxes"]) * scale, "labels": t["class_labels"]} for t in targets]
+        gts = [{"boxes": cxcywh_to_xyxy(t["boxes"]) * scale, "labels": t["labels"]} for t in targets]
 
         mean_ap.update(preds, gts)
         for pred, gt in zip(preds, gts):
@@ -97,7 +94,6 @@ def evaluate(
         "F1": 2 * precision * recall / max(precision + recall, 1e-9),
         "mAP50": max(float(res["map_50"]), 0.0),         # torchmetrics отдаёт -1, если GT нет вообще
         "mAP50-95": max(float(res["map"]), 0.0),
-        "val_loss": loss_sum / max(batches, 1),
     }
     per_class = res["map_per_class"].reshape(-1).tolist()
     for cls, ap in zip(res["classes"].reshape(-1).tolist(), per_class):
