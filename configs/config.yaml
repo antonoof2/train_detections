@@ -1,0 +1,58 @@
+clearml:
+  project_name: detection_fire
+  task_name: dfine960_nano_stage1
+  tags: [dfine, 960imgsz, nano, stage1]
+
+data:
+  root: ../data/dataset   # путь к датасету (YOLO-формат)
+  train: stage1/images    # пути относительно root, labels лежат рядом: .../images -> .../labels
+  val: val/images
+  names: [people, fire, smoke]
+
+model:
+  size: nano       # nano | small | medium | large | xlarge
+  weights: null
+
+# параметры обучения
+train:
+  resolution: 960           # кратно 32; кадры сжимаются в квадрат resolution x resolution
+  epochs: 5
+  batch_size: 12
+  grad_accum_steps: 2       # эффективный батч = batch_size * grad_accum_steps
+  lr: 2.0e-4                # энкодер, декодер и головы
+  lr_backbone: 2.0e-5       # бэкбон HGNetV2 (дообучаем осторожнее)
+  weight_decay: 1.0e-4
+  warmup_steps: 300         # шагов оптимизатора, линейный разогрев lr
+  min_lr_ratio: 0.05        # косинус затухает до lr * min_lr_ratio
+  clip_grad_norm: 0.1
+  amp: bf16                 # bf16 | fp16 | none (bf16 без поддержки GPU автоматически станет fp16)
+  ema: true                 # метрики, best/last и инференс — по EMA-весам
+  ema_decay: 0.9999
+  ema_tau: 2000             # разогрев EMA: decay * (1 - exp(-step / tau))
+  multiscale: true          # случайный размер батча в [resolution - range, resolution + range]
+  multiscale_range: 96
+  no_aug_last_epochs: 1     # в последних N эпохах сильные аугментации и multiscale выключены
+  early_stopping: true
+  early_stopping_patience: 8
+  eval_interval: 1          # раз в сколько эпох считать метрики на val
+  log_every: 50             # как часто (в шагах) писать loss в ClearML
+  num_workers: 8
+  seed: 42
+  device: cuda:0
+
+# фиксированные кадры из val для визуального сравнения моделей
+samples:
+  images: [      # пути относительно data.root
+    val/images/dfire_WEB07289.jpg,
+    val/images/dfire_WEB07713.jpg,
+    val/images/dfire_WEB07793.jpg,
+    val/images/dfire_WEB07825.jpg,
+    val/images/dfire_WEB08381.jpg,
+    val/images/dfire_WEB08953.jpg,
+    val/images/dfire_WEB09124.jpg,
+    val/images/dfire_WEB09138.jpg,
+  ]
+
+predict:
+  video: ../data/dataset/test_video.mp4
+  conf: 0.3
