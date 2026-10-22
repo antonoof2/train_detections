@@ -2,13 +2,13 @@ PYTHON  ?= python
 WEIGHTS ?=
 ARGS    ?=
 
-.PHONY: help install stage1 stage2
+.PHONY: help install stage1 stage2 clean
 
 help:
 	@echo "make install                                - поставить зависимости"
-	@echo "make stage1 [MODEL=<размер>]                - обучение на stage1/images с COCO-весов"
-	@echo "make stage2 [MODEL=..] [WEIGHTS=<папка>]     - дообучение на stage2/images (с весов stage1, если WEIGHTS задан)"
-	@echo "MODEL: nano | small | medium | large | xlarge"
+	@echo "make stage1                                 - обучение на stage1/images с COCO-весов"
+	@echo "make stage2 [WEIGHTS=<папка>]               - дообучение на stage2/images (с весов stage1, если WEIGHTS задан)"
+	@echo "models: nano | small | medium | large | xlarge"
 	@echo "ARGS=\"...\"                                - доп. hydra-оверрайды"
 
 install:
@@ -24,3 +24,12 @@ stage2:
 		data.train=stage2/images \
 		$(if $(WEIGHTS),"model.weights='$(WEIGHTS)'") \
 		$(ARGS)
+
+ifeq ($(OS),Windows_NT)
+    RM_DIR = rmdir /S /Q
+else
+    RM_DIR = rm -rf
+endif
+
+clean:
+	-$(RM_DIR) outputs

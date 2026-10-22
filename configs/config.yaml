@@ -1,26 +1,26 @@
 clearml:
   project_name: detection_fire
-  task_name: dfine960_nano_stage1
-  tags: [dfine, 960imgsz, nano, stage1]
+  task_name: dfine640_large_stage1_test
+  tags: [dfine, 640imgsz, large, stage1, test]
 
 data:
-  root: ../data/dataset   # путь к датасету (YOLO-формат)
-  train: stage1/images    # пути относительно root, labels лежат рядом: .../images -> .../labels
+  root: ../data/dataset   # путь к датасету
+  train: stage1/images    # пути относительно root
   val: val/images
   names: [people, fire, smoke]
 
 model:
-  size: nano       # nano | small | medium | large | xlarge
+  size: large       # nano | small | medium | large | xlarge
   weights: null
 
 # параметры обучения
 train:
-  resolution: 960           # кратно 32; кадры сжимаются в квадрат resolution x resolution
-  epochs: 5
+  resolution: 640           # кратно 32
+  epochs: 1
   batch_size: 12
   grad_accum_steps: 2       # эффективный батч = batch_size * grad_accum_steps
   lr: 2.0e-4                # энкодер, декодер и головы
-  lr_backbone: 2.0e-5       # бэкбон HGNetV2 (дообучаем осторожнее)
+  lr_backbone: 2.0e-5       # бэкбон HGNetV2
   weight_decay: 1.0e-4
   warmup_steps: 300         # шагов оптимизатора, линейный разогрев lr
   min_lr_ratio: 0.05        # косинус затухает до lr * min_lr_ratio
