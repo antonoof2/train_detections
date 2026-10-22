@@ -1,0 +1,53 @@
+clearml:
+  project_name: detection_fire
+  task_name: rfdetr960_nano_stage1
+  tags: [rfdetr, 960imgsz, nano, stage1]
+
+data:
+  root: ../data/dataset   # путь к датасету
+  train: stage1/images    # пути относительно root, labels лежат рядом с images
+  val: val/images
+  names: [people, fire, smoke]
+
+model:
+  size: nano       # nano | small | medium | large
+  weights: null     # null — COCO-предобученные; путь к .pth — дообучение (stage2 от stage1)
+
+# RFDETR.train(**train)
+train:
+  # Large предобучен на 704 (кратно 32). Кадры 1024x768 сжимаются в квадрат 704x704
+  resolution: 960
+  epochs: 5
+  batch_size: 12
+  grad_accum_steps: 2
+  lr: 2.0e-4
+  lr_encoder: 1.5e-4
+  weight_decay: 1.0e-4
+  early_stopping: true
+  early_stopping_patience: 8
+  skip_best_epochs: 2
+  checkpoint_interval: 5
+  num_workers: 8
+  seed: 42
+  device: cuda:0
+  tensorboard: true       # ClearML подхватывает кривые обучения из TensorBoard автоматически
+  log_per_class_metrics: true
+  progress_bar: tqdm
+
+# фиксированные кадры из val для визуального сравнения моделей
+samples:
+  images: [      # пути относительно data.root
+    val/images/dfire_WEB07289.jpg,
+    val/images/dfire_WEB07713.jpg,
+    val/images/dfire_WEB07793.jpg,
+    val/images/dfire_WEB07825.jpg,
+    val/images/dfire_WEB08381.jpg,
+    val/images/dfire_WEB08953.jpg,
+    val/images/dfire_WEB09124.jpg,
+    val/images/dfire_WEB09138.jpg,
+  ]
+
+# предсказание на видео и картинках после обучения
+predict:
+  video: ../data/dataset/test_video.mp4
+  conf: 0.3

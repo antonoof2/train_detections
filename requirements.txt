@@ -1,0 +1,7 @@
+rfdetr[train]>=1.11,<2      # тянет torch, pytorch_lightning, supervision, pycocotools
+tensorboard                 # кривые обучения -> ClearML (автоперехват)
+clearml
+hydra-core>=1.3
+opencv-python-headless
+pyyaml
+tqdm
